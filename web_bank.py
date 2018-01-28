@@ -108,46 +108,23 @@ class NewParser:
 		                                                     }))
 		page=urllib2.urlopen(request).read()
 		referer = url
-		url= self.URL+'/banking/'
-
-		# init search
-		request=urllib2.Request(url+'?$part=DkbTransactionBanking.content.creditcard.CreditcardTransactionSearch&$event=init',
-		                        headers={'Referer':urllib.quote_plus(referer)})
-		throwaway=urllib2.urlopen(request).read()
-		referer = url
+		url= self.URL+'/banking/finanzstatus/kreditkartenumsaetze'
 
 		# retrieve data
+		# Todo: get all credit cars from slAllAccounts dropdown
+		slAllAccounts = "1"
 		request=urllib2.Request(url, data= urllib.urlencode({
-		                                                     'slCreditCard': '0',
-		                                                     'searchPeriod': '0',
+		                                                     'slAllAccounts': slAllAccounts,
+		                                                     'slSearchPeriod': '1',
+		                                                     'filterType': 'PERIOD',
 		                                                     'postingDate': fromdate,
-		                                                     'toPostingDate': till,
-		                                                     '$$event_search': 'Umsätze+anzeigen',
-		                                                     '$part': 'DkbTransactionBanking.content.creditcard.CreditcardTransactionSearch',
-		                                                     '$$$event_search': 'search',
+		                                                     '$event': 'search'
+
 		}), headers={'Referer':urllib.quote_plus(referer)})
 		data= ''.join(urllib2.urlopen(request).readlines())
 
-		# find card index
-		if not card=='':
-		    	cc_index= self.get_cc_index(card, data)
-		    	# again retrieve data for correct card
-		    	request=urllib2.Request(url, data= urllib.urlencode({
-		    	                                                     'slCreditCard': cc_index,
-		    	                                                     'searchPeriod': '0',
-		    	                                                     'postingDate': fromdate,
-		    	                                                     'toPostingDate': till,
-		    	                                                     '$$event_search': 'Umsätze+anzeigen',
-		    	                                                     '$part': 'DkbTransactionBanking.content.creditcard.CreditcardTransactionSearch',
-		    	                                                     '$$$event_search': 'search',
-		    	}), headers={'Referer':urllib.quote_plus(url+"?$part=DkbTransactionBanking.content.banking.FinancialStatus.FinancialStatus&$event=paymentTransaction&row=1&table=cashTable")})
-		    	throwaway= ''.join(urllib2.urlopen(request).readlines())
-
-
-
-		#CSV abrufen
-		request=urllib2.Request(url+'?$part=DkbTransactionBanking.content.creditcard.CreditcardTransactionSearch&$event=csvExport',
-		                        headers={'Referer':urllib.quote_plus(url)})
+			#CSV abrufen
+		request=urllib2.Request(url+'?$event=csvExport', headers={'Referer':urllib.quote_plus(url)})
 		antwort= urllib2.urlopen(request).read()
 		log('Daten empfangen. Länge: %s'%len(antwort))
 		return antwort
