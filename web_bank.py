@@ -74,6 +74,7 @@ class NewParser:
 	PLUSMINUS = 'frmSollHabenKennzeichen'
 	MINUS_CHAR='S'
 	DATUM = 'frmBelegdatum'
+	ORGBETRAG = 'frmOriginalBuchungsbetrag'
 
 	def get_cc_index(self, card, data):
 		log('Finde Kreditkartenindex für Karte ***%s...'%card)
@@ -116,7 +117,7 @@ class NewParser:
 		url= self.URL+'/banking/finanzstatus/kreditkartenumsaetze'
 
 		# retrieve data
-		# Todo: get all credit cars from slAllAccounts dropdown
+		# Todo: get all credit cars from slAllAccounts dropdown (see get_cc_index)
 		slAllAccounts = "1"
 		request=urllib2.Request(url, data= urllib.urlencode({
 		                                                     'slAllAccounts': slAllAccounts,
@@ -147,14 +148,15 @@ class NewParser:
 				act[self.DATUM]=g[2][1:-1]
 				act[self.PLUSMINUS]=''
 				act[self.BETRAG]=g[4][1:-1]
+				act[self.ORGBETRAG]=g[5][1:-1]
 				result.append(act)
 		return result
 
 	def render_csv(self,csv):
-		render = "Wertstellung | Belegdatum |                                       Beschreibung | Betrag (EUR) | Org. Betrag | N. im Saldo\n"
+		render = "Wertstellung | Belegdatum |                                       Beschreibung | Betrag (EUR) |   Org. Betrag |\n"
 		for line in csv:
-			render += "{:>12s} | {:>9s} | {:>50s} | {:>12s} | {:>11s} | {:>11s}\n".format(
-				line['frmBuchungstag'],line['frmBelegdatum'],line['frmVerwendungszweck'],line['frmBuchungsbetrag'],"Nicht impl.", line['frmSollHabenKennzeichen'])
+			render += "{:>12s} | {:>9s} | {:>50s} | {:>12s} |  {:>12s} |\n".format(
+				line[self.TAG],line[self.DATUM],line[self.ZWECK],line[self.BETRAG],line[self.ORGBETRAG])
 		return render
 
 CC_NAME= 'VISA'
