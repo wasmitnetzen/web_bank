@@ -44,6 +44,7 @@ Benutzung: web_bank.py [OPTIONEN]
 
 import sys, getopt
 from datetime import datetime
+from datetime import timedelta
 from getpass import getpass
 import urllib2, urllib, cookielib, re
 
@@ -115,15 +116,17 @@ class NewParser:
 		slAllAccounts = "1"
 		request=urllib2.Request(url, data= urllib.urlencode({
 		                                                     'slAllAccounts': slAllAccounts,
-		                                                     'slSearchPeriod': '1',
-		                                                     'filterType': 'PERIOD',
+		                                                     'slSearchPeriod': '0',
+		                                                     'filterType': 'DATE_RANGE',
 		                                                     'postingDate': fromdate,
-		                                                     '$event': 'search'
+		                                                     'toPostingDate': till,
+		                                                     '$event': 'search',
+		                                                     'slTransactionStatus': '0'
 
 		}), headers={'Referer':urllib.quote_plus(referer)})
 		data= ''.join(urllib2.urlopen(request).readlines())
 
-			#CSV abrufen
+		#fetch CSV
 		request=urllib2.Request(url+'?$event=csvExport', headers={'Referer':urllib.quote_plus(url)})
 		antwort= urllib2.urlopen(request).read()
 		log('Daten empfangen. Länge: %s'%len(antwort))
@@ -229,8 +232,11 @@ def main(argv=None):
 				print 'Mit Debug-Ausgaben'
 				global debug
 				debug=True
-		if not account or not fromdate:
-			raise Usage('Anfangsdatum und Kontonummer müssen angegeben sein.')
+		if not account:
+			raise Usage('Kontonummer muss angegeben sein.')
+		if not fromdate:
+			fromdate = (datetime.now() - timedelta(days=30)).strftime('%d.%m.%Y')
+			log("Anfangsdatum nicht gesetzt, setze 30 Tage = {}".format(fromdate))
 		if not password:
 			try:
 				password=getpass('Geben Sie das Passwort für das Konto '+account+' ein: ')
