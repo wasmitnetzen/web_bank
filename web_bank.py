@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: UTF-8 -*-
 '''
 Holt Kreditkarten-Umsätze per Web-Scraping vom Webfrontend der DKB
@@ -50,18 +50,18 @@ import sys, getopt
 from datetime import datetime
 from datetime import timedelta
 from getpass import getpass
-import urllib2, urllib, cookielib, re
+import urllib.request, urllib.error, urllib.parse, urllib.request, urllib.parse, urllib.error, http.cookiejar, re
 
 def group(lst, n):
-	return zip(*[lst[i::n] for i in range(n)])
+	return list(zip(*[lst[i::n] for i in range(n)]))
 
 debug=False
 def log(msg):
 	if debug:
-		print msg
+		print(msg)
 
 def debugHtmlToFile(content):
-	with open("current.html", 'w', 0) as htmlFile:
+	with open("current.html", 'w') as htmlFile:
 		htmlFile.write(content)
 
 
@@ -89,21 +89,20 @@ class NewParser:
 		log('Hole sessionID und Token...')
 		# retrieve sessionid and token
 		url= self.URL+"/banking"
-		cj = cookielib.LWPCookieJar()
+		cj = http.cookiejar.LWPCookieJar()
 		if debug:
-			opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj),urllib2.HTTPSHandler(debuglevel=1))
+			opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj),urllib.request.HTTPSHandler(debuglevel=1))
 		else:
-			opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj),urllib2.HTTPSHandler(debuglevel=0))
+			opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj),urllib.request.HTTPSHandler(debuglevel=0))
 		opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-		urllib2.install_opener(opener)
-		page= urllib2.urlopen(url,).read()
-		debugHtmlToFile(page)
+		urllib.request.install_opener(opener)
+		page= urllib.request.urlopen(url,).read().decode('utf-8')
 		token= re.findall('<input type="hidden" name="token" value="(.*)" id=',page)[0]
 		sID = re.findall('<input type="hidden" name="\$sID\$" value="(.*)" ',page)[0]
 		log('Token: {}, sID {}'.format(token,sID))
 		# login
 		url= self.URL+'/banking'
-		request=urllib2.Request(url, data= urllib.urlencode({
+		request=urllib.request.Request(url, data=urllib.parse.urlencode({
 		                                                     'token': token,
 		                                                     '$sID$': sID,
 		                                                     'j_username': account,
@@ -111,14 +110,14 @@ class NewParser:
 		                                                     'browserName': "Firefox",
 		                                                     'browserVersion': "40",
 		                                                     '$event': 'login'
-		                                                     }))
-		page=urllib2.urlopen(request).read()
+		                                                     }).encode('utf-8'))
+		page=urllib.request.urlopen(request).read()
 		referer = url
 		url= self.URL+'/banking/finanzstatus/kreditkartenumsaetze'
 
 		# retrieve data
 		slAllAccounts = "1"
-		request=urllib2.Request(url, data= urllib.urlencode({
+		request=urllib.request.Request(url, data= urllib.parse.urlencode({
 		                                                     'slAllAccounts': slAllAccounts,
 		                                                     'slSearchPeriod': '0',
 		                                                     'filterType': 'DATE_RANGE',
@@ -127,11 +126,11 @@ class NewParser:
 		                                                     '$event': 'search',
 		                                                     'slTransactionStatus': '0'
 
-		}), headers={'Referer':urllib.quote_plus(referer)})
-		data= ''.join(urllib2.urlopen(request).readlines())
+		}).encode('utf-8'), headers={'Referer':urllib.parse.quote_plus(referer)})
+		data= urllib.request.urlopen(request).read().decode('utf-8')
 		if card:
 			slAllAccounts = self.get_cc_index(card,data)
-			request=urllib2.Request(url, data= urllib.urlencode({
+			request=urllib.request.Request(url, data= urllib.parse.urlencode({
 		                                                     'slAllAccounts': slAllAccounts,
 		                                                     'slSearchPeriod': '0',
 		                                                     'filterType': 'DATE_RANGE',
@@ -140,14 +139,14 @@ class NewParser:
 		                                                     '$event': 'search',
 		                                                     'slTransactionStatus': '0'
 
-			}), headers={'Referer':urllib.quote_plus(referer)})
-			urllib2.urlopen(request)
+			}).encode('utf-8'), headers={'Referer':urllib.parse.quote_plus(referer)})
+			urllib.request.urlopen(request)
 
 
 
 		#fetch CSV
-		request=urllib2.Request(url+'?$event=csvExport', headers={'Referer':urllib.quote_plus(url)})
-		antwort= urllib2.urlopen(request).read().decode('iso-8859-1').encode('utf8')
+		request=urllib.request.Request(url+'?$event=csvExport', headers={'Referer':urllib.parse.quote_plus(url)})
+		antwort= urllib.request.urlopen(request).read().decode('iso-8859-1')
 		log('Daten empfangen. Länge: {}, Typ: {}'.format(len(antwort),type(antwort)))
 		return antwort
 
@@ -180,7 +179,7 @@ LOGIN_PASSWORD=''
 PARSER= NewParser()
 
 GUESSES=[
-		(PARSER.BETRAG,'-150.0',u'Aktiva:Barvermögen:Bargeld'),
+		(PARSER.BETRAG,'-150.0','Aktiva:Barvermögen:Bargeld'),
 ]
 
 def guessCategories(f):
@@ -197,7 +196,7 @@ def render_qif(cc_data):
 	log('Für Ausgabe vorbereiten:')
 	for f in cc_data:
 		log(str(f))
-		if PARSER.TAG in f.keys():
+		if PARSER.TAG in list(f.keys()):
 			f[PARSER.BETRAG]= float(f[PARSER.BETRAG].replace('.','').replace(',','.'))
 			if PARSER.MINUS_CHAR in f[PARSER.PLUSMINUS]:
 				f[PARSER.BETRAG]= -f[PARSER.BETRAG]
@@ -234,11 +233,11 @@ def main(argv=None):
 	try:
 		try:
 			opts, args = getopt.getopt(argv[1:], "ha:c:p:f:t:o:v:n", ['help','account=','card=','password=','from=','till=','outfile=','verbose','nice'])
-		except getopt.error, msg:
+		except getopt.error as msg:
 			raise Usage(msg)
 		for o, a in opts:
 			if o in ("-h", "--help"):
-				print __doc__
+				print(__doc__)
 				return 0
 			if o in ('-a','--account'):
 				account= a
@@ -257,10 +256,10 @@ def main(argv=None):
 			if o in ('-o','--outfile'):
 				try:
 					outfile=open(a,'w')
-				except IOError, msg:
+				except IOError as msg:
 					raise Usage(msg)
 			if o in ('-v','--verbose'):
-				print 'Mit Debug-Ausgaben'
+				print('Mit Debug-Ausgaben')
 				global debug
 				debug=True
 		if not account:
@@ -280,11 +279,11 @@ def main(argv=None):
 		if formatted:
 			print(PARSER.render_csv(cc_data))
 		else:
-			print >>outfile, render_qif(cc_data)
+			print(render_qif(cc_data), file=outfile)
 
-	except Usage, err:
-		print >>sys.stderr, __doc__
-		print >>sys.stderr, err.msg
+	except Usage as err:
+		print(__doc__, file=sys.stderr)
+		print(err.msg, file=sys.stderr)
 		return 2
 
 if __name__ == '__main__':
