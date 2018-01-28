@@ -26,6 +26,8 @@ Abhängigkeit zu tidy und xpath.
 12.05.2012: Fix des Session-Handlings durch erneute Änderung der DKB (Akzeptieren von
 Cookies ist erforderlich) Danke an Robert Steffens!
 
+28.01.2018: Anpassung der kompletten Abfragen nach Interface-Änderungen durch die DKB
+
 Benutzung: web_bank.py [OPTIONEN]
 
  -a, --account=ACCOUNT      Kontonummer des Hauptkontos. Angabe notwendig
@@ -35,8 +37,10 @@ Benutzung: web_bank.py [OPTIONEN]
                             geben Sie das Passwort ein, wenn Sie danach
                             gefragt werden)
  -f, --from=DD.MM.YYYY      Buchungen ab diesem Datum abfragen
+                            Default: Vor 30 Tagen
  -t, --till=DD.MM.YYYY      Buchungen bis zu diesem Datum abfragen
                             Default: Heute
+ -n, --nice                 Gebe die Daten in einer formatierten Tabelle zurück
  -o, --outfile=FILE         Dateiname für die Ausgabedatei
                             Default: Standardausgabe (Fenster)
  -v, --verbose              Gibt zusätzliche Debug-Informationen aus
@@ -51,7 +55,7 @@ import urllib2, urllib, cookielib, re
 def group(lst, n):
 	return zip(*[lst[i::n] for i in range(n)])
 
-debug=True
+debug=False
 def log(msg):
 	if debug:
 		print msg
@@ -146,6 +150,13 @@ class NewParser:
 				result.append(act)
 		return result
 
+	def render_csv(self,csv):
+		render = "Wertstellung | Belegdatum |                                       Beschreibung | Betrag (EUR) | Org. Betrag | N. im Saldo\n"
+		for line in csv:
+			render += "{:>12s} | {:>9s} | {:>50s} | {:>12s} | {:>11s} | {:>11s}\n".format(
+				line['frmBuchungstag'],line['frmBelegdatum'],line['frmVerwendungszweck'],line['frmBuchungsbetrag'],"Nicht impl.", line['frmSollHabenKennzeichen'])
+		return render
+
 CC_NAME= 'VISA'
 CC_NUMBER= ''
 LOGIN_ACCOUNT=''
@@ -206,7 +217,7 @@ def main(argv=None):
 		argv = sys.argv
 	try:
 		try:
-			opts, args = getopt.getopt(argv[1:], "ha:c:p:f:t:o:v", ['help','account=','card=','password=','from=','till=','outfile=','verbose'])
+			opts, args = getopt.getopt(argv[1:], "ha:c:p:f:t:o:v:n", ['help','account=','card=','password=','from=','till=','outfile=','verbose','nice'])
 		except getopt.error, msg:
 			raise Usage(msg)
 		for o, a in opts:
@@ -223,6 +234,10 @@ def main(argv=None):
 				fromdate= a
 			if o in ('-t','--till'):
 				till= a
+			if o in ('-n','--nice'):
+				formatted= True
+			else:
+				formatted= False
 			if o in ('-o','--outfile'):
 				try:
 					outfile=open(a,'w')
@@ -246,7 +261,10 @@ def main(argv=None):
 		cc_csv = PARSER.get_cc_csv(account, card_no, password, fromdate, till)
 		cc_data = PARSER.parse_csv(cc_csv)
 
-		print >>outfile, render_qif(cc_data).encode('utf-8')
+		if formatted:
+			print >>outfile, PARSER.render_csv(cc_data).encode('utf-8')
+		else:
+			print >>outfile, render_qif(cc_data).encode('utf-8')
 
 	except Usage, err:
 		print >>sys.stderr, __doc__
