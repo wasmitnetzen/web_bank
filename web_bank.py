@@ -78,12 +78,12 @@ class NewParser:
 
 	def get_cc_index(self, card, data):
 		log('Finde Kreditkartenindex für Karte ***%s...'%card)
-		pattern= r'<option value="(.)" id=".*"( selected="selected" )?>.{12}%s / Kreditkarte'%card
+		pattern = '"(.)" >[0-9\*]*{} / Kreditkarte'.format(card)
 		index= re.findall(pattern, data)
 		if len(index)>0:
-			return index[0][0]
+			return index[0]
 		else:
-			return '0'
+			return '1'
 
 	def get_cc_csv(self, account, card, password, fromdate, till):
 		log('Hole sessionID und Token...')
@@ -117,7 +117,6 @@ class NewParser:
 		url= self.URL+'/banking/finanzstatus/kreditkartenumsaetze'
 
 		# retrieve data
-		# Todo: get all credit cars from slAllAccounts dropdown (see get_cc_index)
 		slAllAccounts = "1"
 		request=urllib2.Request(url, data= urllib.urlencode({
 		                                                     'slAllAccounts': slAllAccounts,
@@ -130,11 +129,26 @@ class NewParser:
 
 		}), headers={'Referer':urllib.quote_plus(referer)})
 		data= ''.join(urllib2.urlopen(request).readlines())
+		if card:
+			slAllAccounts = self.get_cc_index(card,data)
+			request=urllib2.Request(url, data= urllib.urlencode({
+		                                                     'slAllAccounts': slAllAccounts,
+		                                                     'slSearchPeriod': '0',
+		                                                     'filterType': 'DATE_RANGE',
+		                                                     'postingDate': fromdate,
+		                                                     'toPostingDate': till,
+		                                                     '$event': 'search',
+		                                                     'slTransactionStatus': '0'
+
+			}), headers={'Referer':urllib.quote_plus(referer)})
+			urllib2.urlopen(request)
+
+
 
 		#fetch CSV
 		request=urllib2.Request(url+'?$event=csvExport', headers={'Referer':urllib.quote_plus(url)})
-		antwort= urllib2.urlopen(request).read()
-		log('Daten empfangen. Länge: %s'%len(antwort))
+		antwort= urllib2.urlopen(request).read().decode('iso-8859-1').encode('utf8')
+		log('Daten empfangen. Länge: {}, Typ: {}'.format(len(antwort),type(antwort)))
 		return antwort
 
 	def parse_csv(self, cc_csv):
@@ -201,7 +215,7 @@ def render_qif(cc_data):
 			if c:
 				cc_qif.append('L'+c)
 			cc_qif.append('^')
-	return u'\n'.join(cc_qif)
+	return '\n'.join(cc_qif)
 
 class Usage(Exception):
 	def __init__(self, msg):
@@ -264,9 +278,9 @@ def main(argv=None):
 		cc_data = PARSER.parse_csv(cc_csv)
 
 		if formatted:
-			print >>outfile, PARSER.render_csv(cc_data).encode('utf-8')
+			print(PARSER.render_csv(cc_data))
 		else:
-			print >>outfile, render_qif(cc_data).encode('utf-8')
+			print >>outfile, render_qif(cc_data)
 
 	except Usage, err:
 		print >>sys.stderr, __doc__
