@@ -78,11 +78,13 @@ class NewParser:
 
 	def get_cc_index(self, card, data):
 		log('Finde Kreditkartenindex für Karte ***%s...'%card)
-		pattern = '"(.)" >[0-9\*]*{} / Kreditkarte'.format(card)
+		pattern = '"(.)"[ ]*>[0-9\*]*{} / Kreditkarte'.format(card)
 		index= re.findall(pattern, data)
 		if len(index)>0:
+			log('Index ist %s'%index[0])
 			return index[0]
 		else:
+			print('Karte nicht gefunden!')
 			return '1'
 
 	def get_cc_csv(self, account, card, password, fromdate, till):
