@@ -84,10 +84,10 @@ class NewParser:
 			log('Index ist %s'%index[0])
 			return index[0]
 		else:
-			print('Karte nicht gefunden!')
+			print('Karte {} nicht gefunden!'.format(card))
 			return '1'
 
-	def get_cc_csv(self, account, card, password, fromdate, till):
+	def get_cc_csv(self, account, card, password, fromdate, till, transactionStatus = '0'):
 		log('Hole sessionID und Token...')
 		# retrieve sessionid and token
 		url= self.URL+"/banking"
@@ -126,7 +126,7 @@ class NewParser:
 		                                                     'postingDate': fromdate,
 		                                                     'toPostingDate': till,
 		                                                     '$event': 'search',
-		                                                     'slTransactionStatus': '0'
+		                                                     'slTransactionStatus': transactionStatus
 
 		}).encode('utf-8'), headers={'Referer':urllib.parse.quote_plus(referer)})
 		data= urllib.request.urlopen(request).read().decode('utf-8')
@@ -139,7 +139,7 @@ class NewParser:
 		                                                     'postingDate': fromdate,
 		                                                     'toPostingDate': till,
 		                                                     '$event': 'search',
-		                                                     'slTransactionStatus': '0'
+		                                                     'slTransactionStatus': transactionStatus
 
 			}).encode('utf-8'), headers={'Referer':urllib.parse.quote_plus(referer)})
 			urllib.request.urlopen(request)
