@@ -98,8 +98,13 @@ class NewParser:
 			opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj),urllib.request.HTTPSHandler(debuglevel=0))
 		opener.addheaders = [('User-agent', 'Mozilla/5.0')]
 		urllib.request.install_opener(opener)
-		page= urllib.request.urlopen(url,).read().decode('utf-8')
-		token= re.findall('<input type="hidden" name="token" value="(.*)" id=',page)[0]
+		page = urllib.request.urlopen(url,).read().decode('utf-8')
+		if "wartung_content" in page:
+			raise Exception("Wartungsarbeiten bei DKB")
+		token = re.findall('<input type="hidden" name="token" value="(.*)" id=',page)
+		if token is None or len(token) == 0:
+			raise Exception('Token not found on page {}'.format(page))
+		token = token[0]
 		sID = re.findall('<input type="hidden" name="\$sID\$" value="(.*)" ',page)[0]
 		log('Token: {}, sID {}'.format(token,sID))
 		# login
